@@ -29,6 +29,21 @@ margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
 <li>Este site, publicado na nuvem</li>
 </ul>
 </section>
+<section class="cartao">
+  <h2>Mensagem da nuvem</h2>
+  <p id="mensagem">Carregando...</p>
+</section>
+<script>
+  fetch('/api/ola')
+    .then(resposta => resposta.json())
+    .then(dados => {
+      const texto = dados.mensagem + ' (' + dados.turma + ')';
+      document.getElementById('mensagem').textContent = texto;
+    })
+    .catch(() => {
+      document.getElementById('mensagem').textContent = 'Não foi possível falar com a função.';
+    });
+</script>
 </main>
 </body>
 </html>
