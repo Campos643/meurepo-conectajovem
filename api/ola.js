@@ -1,5 +1,9 @@
 export default {
   async fetch(request) {
+    const url = new URL(request.url);
+    if (url.searchParams.get('erro') === 'sim') {
+      throw new Error('Erro de teste provocado de propósito');
+    }
     // lê um valor guardado fora do código (variável de ambiente)
     const turma = process.env.NOME_DA_TURMA || 'turma ainda não configurada';
     // esta mensagem aparece nos logs da Vercel
