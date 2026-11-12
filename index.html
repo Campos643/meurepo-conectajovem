@@ -36,20 +36,25 @@ margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
   <p id="hora-local"></p>
 </section>
 <script>
-  fetch('/api/ola')
-    .then(resposta => resposta.json())
-    .then(dados => {
-      const texto = dados.mensagem + ' (' + dados.turma + ')';
-      document.getElementById('mensagem').textContent = texto;
-      // compara o horário gerado na nuvem (UTC) com o do seu computador
-      const nuvem = new Date(dados.horario).toLocaleTimeString('pt-BR', { timeZone: 'UTC' });
-      const local = new Date().toLocaleTimeString('pt-BR');
-      document.getElementById('hora-nuvem').textContent = 'Horário da nuvem (UTC): ' + nuvem;
-      document.getElementById('hora-local').textContent = 'Horário do seu computador: ' + local;
-    })
-    .catch(() => {
-      document.getElementById('mensagem').textContent = 'Não foi possível falar com a função.';
-    });
+  function atualizar() {
+    fetch('/api/ola')
+      .then(resposta => resposta.json())
+      .then(dados => {
+        const texto = dados.mensagem + ' (' + dados.turma + ')';
+        document.getElementById('mensagem').textContent = texto;
+        // compara o horário gerado na nuvem (UTC) com o do seu computador
+        const nuvem = new Date(dados.horario).toLocaleTimeString('pt-BR', { timeZone: 'UTC' });
+        const local = new Date().toLocaleTimeString('pt-BR');
+        document.getElementById('hora-nuvem').textContent = 'Horário da nuvem (UTC): ' + nuvem;
+        document.getElementById('hora-local').textContent = 'Horário do seu computador: ' + local;
+      })
+      .catch(() => {
+        document.getElementById('mensagem').textContent = 'Não foi possível falar com a função.';
+      });
+  }
+  atualizar();
+  // pede uma nova resposta para a nuvem a cada 5 segundos
+  setInterval(atualizar, 5000);
 </script>
 </main>
 </body>
