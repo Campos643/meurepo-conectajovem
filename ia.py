@@ -26,7 +26,13 @@ def perguntar(pergunta):
         },
         timeout=60,
     )
-    resposta.raise_for_status()               # para o programa se houver erro
+    if resposta.status_code == 401:
+        return "Chave inválida ou expirada. Confira o segredo AI_GATEWAY_API_KEY."
+    if resposta.status_code == 402:
+        return "O limite de gasto da sua chave acabou. Fale com o professor."
+    if resposta.status_code == 429:
+        return "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo."
+    resposta.raise_for_status()
     dados = resposta.json()                   # transforma o JSON em dicionário
     return dados["choices"][0]["message"]["content"]
 
