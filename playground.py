@@ -7,13 +7,13 @@ import urllib.request
 # a chave vem do segredo; se ele não existir, o programa pede a chave
 CHAVE = (os.environ.get("AI_GATEWAY_API_KEY")
          or getpass.getpass("Cole sua chave e tecle Enter (ela não aparece na tela): ")).strip()
-URL = "https://ai-gateway.vercel.sh/v1/chat/completions"
-MODELO = "google/gemini-3.5-flash-lite"
+URL = "https://api.cloudflare.com/client/v4/accounts/47344dfa13212db01ed347b310738dae/ai/v1/chat/completions"
+MODELO = "@cf/mistralai/mistral-small-3.1-24b-instruct"
 
 ERROS = {
     401: "Chave inválida ou expirada. Confira o segredo AI_GATEWAY_API_KEY.",
     402: "O limite de gasto da sua chave acabou. Fale com o professor.",
-    429: "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo.",
+    429: "Muitos pedidos ou limite do dia atingido. Espere um pouco e tente de novo.",
 }
 
 

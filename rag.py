@@ -9,13 +9,13 @@ import urllib.request
 # a chave vem do segredo; se ele não existir, o programa pede a chave
 CHAVE = (os.environ.get("AI_GATEWAY_API_KEY")
          or getpass.getpass("Cole sua chave e tecle Enter (ela não aparece na tela): ")).strip()
-BASE = "https://ai-gateway.vercel.sh/v1"
+BASE = "https://api.cloudflare.com/client/v4/accounts/47344dfa13212db01ed347b310738dae/ai/v1"
 CABECALHOS = {"Authorization": f"Bearer {CHAVE}", "Content-Type": "application/json"}
 
 ERROS = {
     401: "Chave inválida ou expirada. Confira o segredo AI_GATEWAY_API_KEY.",
     402: "O limite de gasto da sua chave acabou. Fale com o professor.",
-    429: "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo.",
+    429: "Muitos pedidos ou limite do dia atingido. Espere um pouco e tente de novo.",
 }
 
 # A "base de conhecimento": trechos baseados no edital do Conecta Jovem
@@ -43,7 +43,7 @@ def chamar(caminho, corpo):
 
 def embeddings(textos):
     dados = chamar("/embeddings", {
-        "model": "openai/text-embedding-3-small",
+        "model": "@cf/baai/bge-m3",
         "input": textos,
     })
     return [item["embedding"] for item in dados["data"]]
@@ -69,7 +69,7 @@ trechos = [texto for texto, _ in ranking[:2]]   # fica com os 2 melhores
 # 4. monta o prompt com os trechos e pergunta ao modelo
 contexto = "\n".join(f"- {t}" for t in trechos)
 dados = chamar("/chat/completions", {
-    "model": "google/gemini-3.5-flash-lite",
+    "model": "@cf/mistralai/mistral-small-3.1-24b-instruct",
     "messages": [
         {"role": "system", "content":
             "Responda usando SOMENTE as informações fornecidas. Se a resposta "
