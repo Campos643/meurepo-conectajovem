@@ -1,10 +1,22 @@
+import getpass
+import json
 import math
 import os
-import requests
+import sys
+import urllib.error
+import urllib.request
 
-CHAVE = os.environ["AI_GATEWAY_API_KEY"]
+# a chave vem do segredo; se ele não existir, o programa pede a chave
+CHAVE = (os.environ.get("AI_GATEWAY_API_KEY")
+         or getpass.getpass("Cole sua chave e tecle Enter (ela não aparece na tela): ")).strip()
 BASE = "https://ai-gateway.vercel.sh/v1"
-CABECALHOS = {"Authorization": f"Bearer {CHAVE}"}
+CABECALHOS = {"Authorization": f"Bearer {CHAVE}", "Content-Type": "application/json"}
+
+ERROS = {
+    401: "Chave inválida ou expirada. Confira o segredo AI_GATEWAY_API_KEY.",
+    402: "O limite de gasto da sua chave acabou. Fale com o professor.",
+    429: "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo.",
+}
 
 # A "base de conhecimento": trechos baseados no edital do Conecta Jovem
 DOCUMENTOS = [
@@ -17,13 +29,24 @@ DOCUMENTOS = [
 ]
 
 
+def chamar(caminho, corpo):
+    pedido = urllib.request.Request(
+        BASE + caminho, data=json.dumps(corpo).encode(), headers=CABECALHOS)
+    try:
+        with urllib.request.urlopen(pedido, timeout=60) as resposta:
+            return json.load(resposta)
+    except urllib.error.HTTPError as erro:
+        sys.exit(ERROS.get(erro.code, f"Erro {erro.code}: {erro.read().decode()[:300]}"))
+    except OSError as erro:
+        sys.exit(f"Não consegui falar com a IA. Confira a internet. ({erro})")
+
+
 def embeddings(textos):
-    r = requests.post(f"{BASE}/embeddings", headers=CABECALHOS, json={
+    dados = chamar("/embeddings", {
         "model": "openai/text-embedding-3-small",
         "input": textos,
-    }, timeout=60)
-    r.raise_for_status()
-    return [item["embedding"] for item in r.json()["data"]]
+    })
+    return [item["embedding"] for item in dados["data"]]
 
 
 def similaridade(a, b):
@@ -45,7 +68,7 @@ trechos = [texto for texto, _ in ranking[:2]]   # fica com os 2 melhores
 
 # 4. monta o prompt com os trechos e pergunta ao modelo
 contexto = "\n".join(f"- {t}" for t in trechos)
-r = requests.post(f"{BASE}/chat/completions", headers=CABECALHOS, json={
+dados = chamar("/chat/completions", {
     "model": "google/gemini-3.5-flash-lite",
     "messages": [
         {"role": "system", "content":
@@ -54,10 +77,9 @@ r = requests.post(f"{BASE}/chat/completions", headers=CABECALHOS, json={
         {"role": "user", "content": f"Informações:\n{contexto}\n\nPergunta: {pergunta}"},
     ],
     "temperature": 0.2,
-}, timeout=60)
-r.raise_for_status()
+})
 
-print("\nResposta:", r.json()["choices"][0]["message"]["content"])
+print("\nResposta:", dados["choices"][0]["message"]["content"])
 print("\nTrechos consultados:")
 for t in trechos:
     print(" -", t)

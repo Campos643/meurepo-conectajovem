@@ -1,8 +1,13 @@
+import getpass
 import json
 import os
-import requests
+import sys
+import urllib.error
+import urllib.request
 
-CHAVE = os.environ["AI_GATEWAY_API_KEY"]
+# a chave vem do segredo; se ele não existir, o programa pede a chave
+CHAVE = (os.environ.get("AI_GATEWAY_API_KEY")
+         or getpass.getpass("Cole sua chave e tecle Enter (ela não aparece na tela): ")).strip()
 URL = "https://ai-gateway.vercel.sh/v1/chat/completions"
 
 INSTRUCAO = """Você é um assistente de estudos.
@@ -11,27 +16,43 @@ Leia o texto do usuário e responda SOMENTE com um JSON neste formato:
  "palavras_chave": ["palavra1", "palavra2", "palavra3"],
  "nivel": "básico, intermediário ou avançado"}"""
 
+ERROS = {
+    401: "Chave inválida ou expirada. Confira o segredo AI_GATEWAY_API_KEY.",
+    402: "O limite de gasto da sua chave acabou. Fale com o professor.",
+    429: "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo.",
+}
+
 texto = input("Cole um texto de estudo: ")
 
-resposta = requests.post(
+pedido = urllib.request.Request(
     URL,
-    headers={"Authorization": f"Bearer {CHAVE}"},
-    json={
+    data=json.dumps({
         "model": "google/gemini-3.5-flash-lite",
         "messages": [
             {"role": "system", "content": INSTRUCAO},
             {"role": "user", "content": texto},
         ],
         "temperature": 0.2,
+    }).encode(),
+    headers={
+        "Authorization": f"Bearer {CHAVE}",
+        "Content-Type": "application/json",
     },
-    timeout=60,
 )
-resposta.raise_for_status()
+try:
+    with urllib.request.urlopen(pedido, timeout=60) as resposta:
+        conteudo = json.load(resposta)["choices"][0]["message"]["content"]
+except urllib.error.HTTPError as erro:
+    sys.exit(ERROS.get(erro.code, f"Erro {erro.code}: {erro.read().decode()[:300]}"))
+except OSError as erro:
+    sys.exit(f"Não consegui falar com a IA. Confira a internet. ({erro})")
 
-conteudo = resposta.json()["choices"][0]["message"]["content"]
 conteudo = conteudo.replace("```json", "").replace("```", "").strip()
 
-dados = json.loads(conteudo)          # texto JSON vira dicionário Python
+try:
+    dados = json.loads(conteudo)          # texto JSON vira dicionário Python
+except ValueError:
+    sys.exit("A IA não respondeu em JSON. Tente de novo. Resposta recebida:\n" + conteudo)
 print("Resumo:", dados["resumo"])
 print("Palavras-chave:", ", ".join(dados["palavras_chave"]))
 print("Nível:", dados["nivel"])
